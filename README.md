@@ -4,15 +4,15 @@ Google Colab notebooks for AI media generation — images and videos created thr
 [OpenRouter API](https://openrouter.ai/docs), so a single provider-agnostic endpoint can serve
 every image and video model.
 
-The repository currently ships the official Stability AI `Image_Generator.ipynb` as a reference
-implementation. It is being migrated to the OpenRouter API: future image and video generations
-will run exclusively through OpenRouter.
+The repository ships the `Image_Generator.ipynb` notebook built on **Black Forest Labs FLUX.2 Pro**,
+the high-end image generation and editing model from BFL, plus **FLUX.2 Klein 4B** as a budget
+alternative for drafts and high-volume runs.
 
 ## Repository contents
 
 | File | Description |
 | --- | --- |
-| `Image_Generator.ipynb` | Colab notebook. Currently the Stability AI reference (Stable Image Core, SD3, Sketch, Structure, Creative/Conservative Upscaler, Inpaint, Outpaint, Search-and-Replace, Erase, Remove Background) plus an optional Google Drive mount. To be adapted to the OpenRouter API. |
+| `Image_Generator.ipynb` | Colab notebook. Text-to-image with FLUX.2 Pro (`black-forest-labs/flux.2-pro`) — aspect ratio, resolution, seed, output format; image editing via `input_references`; and a FLUX.2 Klein 4B (`black-forest-labs/flux.2-klein-4b`) budget cell. Optional Google Drive mount for reference images. |
 
 ## Open in Google Colab
 
@@ -33,7 +33,7 @@ from google.colab import userdata
 OPENROUTER_API_KEY = userdata.get("OPENROUTER_API_KEY")
 ```
 
-Fallback (interactive prompt, as in the current notebook):
+Fallback (interactive prompt, as in the notebook):
 
 ```python
 import getpass
@@ -61,10 +61,10 @@ response = requests.post(
         "Content-Type": "application/json",
     },
     json={
-        "model": "google/gemini-2.5-flash-image",
-        "prompt": "A cinematic photo of a rainy Berlin street at night, neon reflections",
-        "aspect_ratio": "16:9",
-        "n": 1,
+        "model": "black-forest-labs/flux.2-pro",
+        "prompt": "A retro travel poster of the Black Forest at dusk, with the bold legible headline 'FLUX.2 PRO' in art-deco lettering",
+        "aspect_ratio": "1:1",
+        "resolution": "1K",
     },
 )
 response.raise_for_status()
@@ -78,7 +78,11 @@ image.save("output.png", format=data["data"][0].get("media_type", "image/png").s
 Optional parameters: `n` (1–10), `resolution` (`512`, `1K`, `2K`, `4K`), `aspect_ratio`
 (`1:1`, `16:9`, `9:16`, `4:3`, …), `size`, `quality` (`low`/`medium`/`high`), `output_format`
 (`png`/`jpeg`/`webp`/`svg`), `background: "transparent"`, `seed`, and `input_references` for
-image-to-image generation (HTTP URLs or base64 data URLs).
+image-to-image generation (HTTP URLs or base64 data URLs) — FLUX.2 Pro supports editing
+existing images this way.
+
+Budget alternative: `black-forest-labs/flux.2-klein-4b` — the fastest and most cost-effective
+model in the FLUX.2 family, ideal for drafts.
 
 Model discovery:
 
@@ -145,22 +149,6 @@ curl "https://openrouter.ai/api/v1/videos/models"
 
 or browse <https://openrouter.ai/models?output_modalities=video> (e.g. Veo 3.1, Seedance, Wan,
 Hailuo).
-
-## Feature migration map (Stability AI → OpenRouter)
-
-| Stability AI (current notebook) | OpenRouter equivalent |
-| --- | --- |
-| Stable Image Core / SD3 (text-to-image) | `POST /api/v1/images` with `prompt` + `aspect_ratio`/`resolution` |
-| Sketch / Structure (image-conditioned generation) | `input_references` on `/api/v1/images` |
-| Inpaint / Outpaint / Search-and-Replace / Erase | Image-edit capable models (e.g. `google/gemini-2.5-flash-image`, `openai/gpt-image-1`) with the image passed via `input_references` |
-| Remove Background | `background: "transparent"` on an alpha-capable model |
-| Creative / Conservative Upscaler | Higher `resolution` tier (`2K`, `4K`) on `/api/v1/images` |
-| — (no video in the notebook yet) | `POST /api/v1/videos` (text-to-video, image-to-video via `frame_images`) |
-| `STABILITY_KEY` interactive prompt | Colab secret `OPENROUTER_API_KEY` |
-
-Exact parameter support varies per model — always check `supported_parameters` in
-`/api/v1/images/models` (images) or `supported_durations` / `supported_resolutions` /
-`supported_aspect_ratios` in `/api/v1/videos/models` (videos) before submitting.
 
 ## Notes
 
